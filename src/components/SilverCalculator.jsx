@@ -13,7 +13,9 @@ export default function SilverCalculator() {
   // Form State
   const [productName, setProductName] = useState('');
   const [itemType, setItemType] = useState('Silver Coin');
+  const [customItemType, setCustomItemType] = useState('');
   const [purityId, setPurityId] = useState('999');
+  const [customPurity, setCustomPurity] = useState('92.5');
   const [weight, setWeight] = useState('');
   const [labourType, setLabourType] = useState('flat'); // 'flat' | 'per_gram' | 'percent'
   const [labourValue, setLabourValue] = useState('');
@@ -26,11 +28,12 @@ export default function SilverCalculator() {
       rate1kg: silverRate || 0,
       weight: parseFloat(weight) || 0,
       purityId,
+      customPurityPercent: customPurity,
       labourType,
       labourValue: parseFloat(labourValue) || 0,
       includeGst
     });
-  }, [silverRate, weight, purityId, labourType, labourValue, includeGst]);
+  }, [silverRate, weight, purityId, customPurity, labourType, labourValue, includeGst]);
 
   const handleQuickAddWeight = (increment) => {
     const current = parseFloat(weight) || 0;
@@ -41,6 +44,9 @@ export default function SilverCalculator() {
   const handleReset = () => {
     setProductName('');
     setItemType('Silver Coin');
+    setCustomItemType('');
+    setPurityId('999');
+    setCustomPurity('92.5');
     setWeight('');
     setLabourValue('');
     setIncludeGst(false);
@@ -60,13 +66,17 @@ export default function SilverCalculator() {
       return;
     }
 
-    const finalProductName = productName.trim() || 'Silver ' + itemType;
+    const effectiveItemType = itemType === 'Custom / Enter Manually'
+      ? (customItemType.trim() || 'Custom Silver Item')
+      : itemType;
+
+    const finalProductName = productName.trim() || 'Silver ' + effectiveItemType;
 
     dispatch(
       addRecord({
         metal: 'silver',
         productName: finalProductName,
-        itemType,
+        itemType: effectiveItemType,
         rateUsed: calc.rateEntered,
         rateUnit: '1kg',
         purityId: calc.purityId,
@@ -160,6 +170,22 @@ export default function SilverCalculator() {
           </div>
         </div>
 
+        {/* Custom Item Type Input (shown if "Custom / Enter Manually" is selected) */}
+        {itemType === 'Custom / Enter Manually' && (
+          <div className="p-3 bg-slate-100 dark:bg-darkBg-900/90 rounded-2xl border border-slate-300 dark:border-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+              Enter Custom Silver Item Type Name
+            </label>
+            <input
+              type="text"
+              value={customItemType}
+              onChange={(e) => setCustomItemType(e.target.value)}
+              placeholder="e.g. Traditional Silver Aarti Thali, Custom Coins..."
+              className="w-full bg-white dark:bg-darkBg-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+            />
+          </div>
+        )}
+
         {/* Silver Purity */}
         <div>
           <label className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -177,6 +203,33 @@ export default function SilverCalculator() {
               </option>
             ))}
           </select>
+
+          {/* Custom Purity Percentage Input */}
+          {purityId === 'custom' && (
+            <div className="mt-2.5 p-3 bg-slate-100 dark:bg-darkBg-900/90 rounded-2xl border border-slate-300 dark:border-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Custom Silver Purity (%)
+                </label>
+                <span className="text-[11px] text-slate-500">e.g. 92.5 for Sterling, 90.0, 80.0</span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1"
+                  max="100"
+                  value={customPurity}
+                  onChange={(e) => setCustomPurity(e.target.value)}
+                  placeholder="92.5"
+                  className="w-full bg-white dark:bg-darkBg-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-400 pr-10"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                  %
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Weight Input (Grams) */}
@@ -270,9 +323,14 @@ export default function SilverCalculator() {
               className="w-full bg-slate-50 dark:bg-darkBg-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-16 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-400/50"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
-              {labourType === 'flat' ? 'flat' : labourType === 'per_gram' ? '/ gram' : 'of silver'}
+              {labourType === 'flat' ? 'flat' : labourType === 'per_gram' ? '/ gram' : '% of metal'}
             </span>
           </div>
+          {labourType === 'percent' && (
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 pl-1">
+              Applied on Metal Value: {calc.labourValue || 0}% of {formatCurrency(calc.metalValue)} = <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(calc.labourAmount)}</strong>
+            </div>
+          )}
         </div>
 
         {/* GST 3% Toggle Row (Entire row clickable for great mobile touch target) */}

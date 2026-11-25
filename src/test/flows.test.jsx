@@ -415,4 +415,85 @@ describe('Sona Chandi Calculator - End-to-End User Flows', () => {
     expect(screen.getByText(/Step 2: Purity Adjustment/i)).toBeDefined();
     expect(screen.getByText(/Copy Calculation Proof/i)).toBeDefined();
   });
+
+  // --------------------------------------------------------------------------
+  // FLOW 7: 85% Gold Purity, Custom Purity %, and Manual Item Type Entry
+  // --------------------------------------------------------------------------
+  it('Flow 7: Calculates with 85% purity, custom purity %, and manual custom item type', () => {
+    // 1. Direct unit test of 85% Gold calculation
+    const calc85 = calculateGold({
+      rate10g: 80000, // 8000/g 24K
+      weight: 10,
+      purityId: '85', // 85%
+      labourType: 'percent',
+      labourValue: 10, // 10% of metal value
+      includeGst: false
+    });
+
+    // 8000 * 0.85 = 6800/g. Metal value = 10 * 6800 = 68000.
+    // Labour 10% on metal value = 6800.
+    // Grand Total = 74800.
+    expect(calc85.effectiveRatePerGram).toBe(6800);
+    expect(calc85.metalValue).toBe(68000);
+    expect(calc85.labourAmount).toBe(6800);
+    expect(calc85.grandTotal).toBe(74800);
+
+    // 2. Direct unit test of Custom Purity Percentage (e.g. 87.5%)
+    const calcCustom = calculateGold({
+      rate10g: 80000,
+      weight: 20,
+      purityId: 'custom',
+      customPurityPercent: 87.5,
+      labourType: 'flat',
+      labourValue: 1500,
+      includeGst: false
+    });
+
+    // 8000 * 0.875 = 7000/g. Metal value = 20 * 7000 = 140000.
+    // Grand Total = 140000 + 1500 = 141500.
+    expect(calcCustom.effectiveRatePerGram).toBe(7000);
+    expect(calcCustom.metalValue).toBe(140000);
+    expect(calcCustom.grandTotal).toBe(141500);
+
+    // 3. UI Flow test for Manual Item Type and 85% selection
+    const store = createTestStore({
+      rates: {
+        date: getTodayDateString(),
+        goldRate: 80000,
+        silverRate: 90000
+      }
+    });
+
+    render(
+      <Provider store={store}>
+        <App />
+      </Provider>
+    );
+
+    // Select "Custom / Enter Manually" for item type
+    const itemTypeSelect = screen.getByDisplayValue('Ring');
+    fireEvent.change(itemTypeSelect, { target: { value: 'Custom / Enter Manually' } });
+
+    // Custom Item Type input appears
+    const customItemInput = screen.getByPlaceholderText(/e.g. Kundan Payal, Armlet/i);
+    expect(customItemInput).toBeDefined();
+    fireEvent.change(customItemInput, { target: { value: 'Antique Bajuband' } });
+
+    // Select 85% purity option
+    const puritySelect = screen.getByDisplayValue(/22K \(91.6%/i);
+    fireEvent.change(puritySelect, { target: { value: '85' } });
+
+    // Weight: 10g
+    const weightInput = screen.getByPlaceholderText('0.000');
+    fireEvent.change(weightInput, { target: { value: '10' } });
+
+    // Save to records
+    const saveBtn = screen.getByRole('button', { name: /Save to Records/i });
+    fireEvent.click(saveBtn);
+
+    const saved = store.getState().records.items[0];
+    expect(saved.itemType).toBe('Antique Bajuband');
+    expect(saved.purityPercent).toBe(85);
+    expect(saved.grandTotal).toBe(68000);
+  });
 });

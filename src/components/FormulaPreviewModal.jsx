@@ -21,7 +21,7 @@ export default function FormulaPreviewModal() {
     labourFormula = `Weight × ₹${calc.labourValue}/g`;
     labourMath = `${formatWeight(calc.weight)} × ₹${calc.labourValue} = ${formatCurrency(calc.labourAmount)}`;
   } else if (calc.labourType === 'percent') {
-    labourFormula = `Metal Value × ${calc.labourValue}%`;
+    labourFormula = `Applied on Metal Value (${calc.labourValue}% of Metal Cost)`;
     labourMath = `${formatCurrency(calc.metalValue)} × ${calc.labourValue}% = ${formatCurrency(calc.labourAmount)}`;
   }
 

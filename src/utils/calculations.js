@@ -5,9 +5,11 @@
 export const GOLD_PURITIES = [
   { id: '22k', label: '22K (91.6% Hallmark 916 - Standard)', factor: 22 / 24, percent: 91.6 },
   { id: '24k', label: '24K (99.9% Pure Bullion)', factor: 1.0, percent: 100 },
+  { id: '85', label: '85% (850 Hallmark / 20.4K)', factor: 0.85, percent: 85.0 },
   { id: '18k', label: '18K (75.0% Jewellery)', factor: 18 / 24, percent: 75.0 },
   { id: '14k', label: '14K (58.5% Modern Fashion)', factor: 14 / 24, percent: 58.5 },
-  { id: 'direct', label: 'Direct Rate (No purity deduction)', factor: 1.0, percent: 100 }
+  { id: 'direct', label: 'Direct Rate (No purity deduction)', factor: 1.0, percent: 100 },
+  { id: 'custom', label: 'Custom Percentage (%)', factor: null, percent: null }
 ];
 
 export const SILVER_PURITIES = [
@@ -15,19 +17,20 @@ export const SILVER_PURITIES = [
   { id: '925', label: '925 Sterling Silver (92.5% Ornaments)', factor: 0.925, percent: 92.5 },
   { id: '900', label: '900 Traditional Silver (90.0%)', factor: 0.900, percent: 90.0 },
   { id: '800', label: '800 Utensil Grade (80.0%)', factor: 0.800, percent: 80.0 },
-  { id: 'direct', label: 'Direct Rate (No purity deduction)', factor: 1.0, percent: 100 }
+  { id: 'direct', label: 'Direct Rate (No purity deduction)', factor: 1.0, percent: 100 },
+  { id: 'custom', label: 'Custom Percentage (%)', factor: null, percent: null }
 ];
 
 export const ITEM_TYPES = {
   gold: [
     'Ring', 'Chain', 'Necklace', 'Earrings', 'Bangles',
     'Bracelet', 'Gold Coin', 'Gold Bar', 'Pendant',
-    'Mangalsutra', 'Nose Pin', 'Kada', 'Other'
+    'Mangalsutra', 'Nose Pin', 'Kada', 'Custom / Enter Manually'
   ],
   silver: [
     'Silver Coin', 'Silver Bar', 'Payal / Anklet',
     'Pooja Thali / Item', 'Murti / Idol', 'Utensil / Glass',
-    'Ring', 'Chain', 'Bracelet', 'Toe Ring / Bichiya', 'Other'
+    'Ring', 'Chain', 'Bracelet', 'Toe Ring / Bichiya', 'Custom / Enter Manually'
   ]
 };
 
@@ -38,6 +41,7 @@ export function calculateGold({
   rate10g,
   weight,
   purityId = '22k',
+  customPurityPercent = null,
   labourType = 'flat',
   labourValue = 0,
   includeGst = false
@@ -48,10 +52,28 @@ export function calculateGold({
 
   // Standard Indian market rate is per 10 grams of 24K
   const baseRatePerGram = r10 / 10;
-  const purityObj = GOLD_PURITIES.find(p => p.id === purityId) || GOLD_PURITIES[0];
-  const effectiveRatePerGram = baseRatePerGram * purityObj.factor;
+
+  let purityFactor = 1.0;
+  let purityPercent = 100;
+  let purityLabel = '24K';
+
+  if (purityId === 'custom') {
+    const cp = parseFloat(customPurityPercent) || 0;
+    purityFactor = cp / 100;
+    purityPercent = cp;
+    purityLabel = `Custom (${cp}%)`;
+  } else {
+    const purityObj = GOLD_PURITIES.find(p => p.id === purityId) || GOLD_PURITIES[0];
+    purityFactor = purityObj.factor;
+    purityPercent = purityObj.percent;
+    purityLabel = purityObj.label;
+  }
+
+  const effectiveRatePerGram = baseRatePerGram * purityFactor;
   const metalValue = w * effectiveRatePerGram;
 
+  // Labour calculation:
+  // When 'percent' is selected, labour is calculated directly on the Metal Value
   let labourAmount = 0;
   if (labourType === 'per_gram') {
     labourAmount = w * lv;
@@ -71,9 +93,9 @@ export function calculateGold({
     rateUnit: '10g',
     baseRatePerGram,
     purityId,
-    purityLabel: purityObj.label,
-    purityPercent: purityObj.percent,
-    purityFactor: purityObj.factor,
+    purityLabel,
+    purityPercent,
+    purityFactor,
     effectiveRatePerGram,
     weight: w,
     metalValue,
@@ -94,6 +116,7 @@ export function calculateSilver({
   rate1kg,
   weight,
   purityId = '999',
+  customPurityPercent = null,
   labourType = 'flat',
   labourValue = 0,
   includeGst = false
@@ -104,10 +127,28 @@ export function calculateSilver({
 
   // Standard Indian market rate is per 1 kg (1000 grams)
   const baseRatePerGram = r1kg / 1000;
-  const purityObj = SILVER_PURITIES.find(p => p.id === purityId) || SILVER_PURITIES[0];
-  const effectiveRatePerGram = baseRatePerGram * purityObj.factor;
+
+  let purityFactor = 1.0;
+  let purityPercent = 100;
+  let purityLabel = '999';
+
+  if (purityId === 'custom') {
+    const cp = parseFloat(customPurityPercent) || 0;
+    purityFactor = cp / 100;
+    purityPercent = cp;
+    purityLabel = `Custom (${cp}%)`;
+  } else {
+    const purityObj = SILVER_PURITIES.find(p => p.id === purityId) || SILVER_PURITIES[0];
+    purityFactor = purityObj.factor;
+    purityPercent = purityObj.percent;
+    purityLabel = purityObj.label;
+  }
+
+  const effectiveRatePerGram = baseRatePerGram * purityFactor;
   const metalValue = w * effectiveRatePerGram;
 
+  // Labour calculation:
+  // When 'percent' is selected, labour is calculated directly on the Metal Value
   let labourAmount = 0;
   if (labourType === 'per_gram') {
     labourAmount = w * lv;
@@ -127,9 +168,9 @@ export function calculateSilver({
     rateUnit: '1kg',
     baseRatePerGram,
     purityId,
-    purityLabel: purityObj.label,
-    purityPercent: purityObj.percent,
-    purityFactor: purityObj.factor,
+    purityLabel,
+    purityPercent,
+    purityFactor,
     effectiveRatePerGram,
     weight: w,
     metalValue,

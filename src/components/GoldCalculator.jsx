@@ -13,7 +13,9 @@ export default function GoldCalculator() {
   // Form State
   const [productName, setProductName] = useState('');
   const [itemType, setItemType] = useState('Ring');
+  const [customItemType, setCustomItemType] = useState('');
   const [purityId, setPurityId] = useState('22k');
+  const [customPurity, setCustomPurity] = useState('85');
   const [weight, setWeight] = useState('');
   const [labourType, setLabourType] = useState('flat'); // 'flat' | 'per_gram' | 'percent'
   const [labourValue, setLabourValue] = useState('');
@@ -26,11 +28,12 @@ export default function GoldCalculator() {
       rate10g: goldRate || 0,
       weight: parseFloat(weight) || 0,
       purityId,
+      customPurityPercent: customPurity,
       labourType,
       labourValue: parseFloat(labourValue) || 0,
       includeGst
     });
-  }, [goldRate, weight, purityId, labourType, labourValue, includeGst]);
+  }, [goldRate, weight, purityId, customPurity, labourType, labourValue, includeGst]);
 
   const handleQuickAddWeight = (increment) => {
     const current = parseFloat(weight) || 0;
@@ -41,6 +44,9 @@ export default function GoldCalculator() {
   const handleReset = () => {
     setProductName('');
     setItemType('Ring');
+    setCustomItemType('');
+    setPurityId('22k');
+    setCustomPurity('85');
     setWeight('');
     setLabourValue('');
     setIncludeGst(false);
@@ -60,13 +66,17 @@ export default function GoldCalculator() {
       return;
     }
 
-    const finalProductName = productName.trim() || 'Gold ' + itemType;
+    const effectiveItemType = itemType === 'Custom / Enter Manually'
+      ? (customItemType.trim() || 'Custom Jewellery')
+      : itemType;
+
+    const finalProductName = productName.trim() || 'Gold ' + effectiveItemType;
 
     dispatch(
       addRecord({
         metal: 'gold',
         productName: finalProductName,
-        itemType,
+        itemType: effectiveItemType,
         rateUsed: calc.rateEntered,
         rateUnit: '10g',
         purityId: calc.purityId,
@@ -160,6 +170,22 @@ export default function GoldCalculator() {
           </div>
         </div>
 
+        {/* Custom Item Type Input (shown if "Custom / Enter Manually" is selected) */}
+        {itemType === 'Custom / Enter Manually' && (
+          <div className="p-3 bg-gold-500/5 rounded-2xl border border-gold-500/30 animate-in fade-in slide-in-from-top-1 duration-150">
+            <label className="block text-xs font-bold text-gold-700 dark:text-gold-400 mb-1">
+              Enter Custom Item Type Name
+            </label>
+            <input
+              type="text"
+              value={customItemType}
+              onChange={(e) => setCustomItemType(e.target.value)}
+              placeholder="e.g. Kundan Payal, Armlet, Traditional Kada..."
+              className="w-full bg-white dark:bg-darkBg-900 border border-gold-500/50 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+            />
+          </div>
+        )}
+
         {/* Purity Selection */}
         <div>
           <label className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -177,6 +203,33 @@ export default function GoldCalculator() {
               </option>
             ))}
           </select>
+
+          {/* Custom Purity Percentage Input */}
+          {purityId === 'custom' && (
+            <div className="mt-2.5 p-3 bg-gold-500/5 rounded-2xl border border-gold-500/30 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-gold-700 dark:text-gold-400">
+                  Custom Gold Purity (%)
+                </label>
+                <span className="text-[11px] text-slate-500">e.g. 85 for 85%, 91.6 for 22K</span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1"
+                  max="100"
+                  value={customPurity}
+                  onChange={(e) => setCustomPurity(e.target.value)}
+                  placeholder="85.0"
+                  className="w-full bg-white dark:bg-darkBg-900 border border-gold-500/50 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500 pr-10"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gold-500 pointer-events-none">
+                  %
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Weight Input (Grams) */}
@@ -270,9 +323,14 @@ export default function GoldCalculator() {
               className="w-full bg-slate-50 dark:bg-darkBg-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-16 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500/50"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
-              {labourType === 'flat' ? 'flat' : labourType === 'per_gram' ? '/ gram' : 'of metal'}
+              {labourType === 'flat' ? 'flat' : labourType === 'per_gram' ? '/ gram' : '% of metal'}
             </span>
           </div>
+          {labourType === 'percent' && (
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 pl-1">
+              Applied on Metal Value: {calc.labourValue || 0}% of {formatCurrency(calc.metalValue)} = <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(calc.labourAmount)}</strong>
+            </div>
+          )}
         </div>
 
         {/* GST 3% Toggle Row (Entire row clickable for great mobile touch target) */}
